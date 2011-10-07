@@ -57,8 +57,8 @@ use PAMI\Client\IClient;
 class ClientImpl implements IClient
 {
     /**
-     * log4php logger or dummy.
-     * @var Logger
+     * Zend_Log instance or null.
+     * @var Zend_Log
      */
     private $_logger;
 
@@ -186,7 +186,7 @@ class ClientImpl implements IClient
 	    stream_set_blocking($this->_socket, 0);
 	    $this->_currentProcessingMessage = '';
 	    //register_tick_function(array($this, 'process'));
-	    if ($this->_logger->isDebugEnabled()) {
+	    if ($this->_logger) {
 	        $this->_logger->debug('Logged in successfully to ami.');
 	    }
 	}
@@ -294,7 +294,7 @@ class ClientImpl implements IClient
 	    if ($aMsg == false) {
 	        return;
 	    }
-	    if ($this->_logger->isDebugEnabled()) {
+	    if ($this->_logger) {
    	        $this->_logger->debug(
 	        	'------ Received: ------ ' . "\n" . $aMsg . "\n\n"
 	        );
@@ -319,7 +319,7 @@ class ClientImpl implements IClient
             $response = $this->findResponse($event);
             $response->addEvent($event);
 	    }
-	    if ($this->_logger->isDebugEnabled()) {
+	    if ($this->_logger) {
    	        $this->_logger->debug('----------------');
 	    }
 	}
@@ -419,7 +419,7 @@ class ClientImpl implements IClient
 	{
 	    $messageToSend = $message->serialize();
 	    $length = strlen($messageToSend);
-	    if ($this->_logger->isDebugEnabled()) {
+	    if ($this->_logger) {
 	        $this->_logger->debug(
 	        	'------ Sending: ------ ' . "\n" . $messageToSend . '----------'
 	        );
@@ -454,7 +454,7 @@ class ClientImpl implements IClient
 	 */
 	public function close()
 	{
-	    if ($this->_logger->isDebugEnabled()) {
+	    if ($this->_logger) {
 	        $this->_logger->debug('Closing connection to asterisk.');
 	    }
 	    $this->send(new LogoffAction());
@@ -470,10 +470,13 @@ class ClientImpl implements IClient
 	 */
 	public function __construct(array $options)
 	{
-        if (isset($options['log4php.properties'])) {
-            \Logger::configure($options['log4php.properties']);
+        if (isset($options['logger'])) {
+			$this->_logger = $options['logger'];
+
+			if (!$this->_logger instanceof Zend_Log) {
+				throw new ClientException('Logger must be an instance of Zend_Log.');
+			}
         }
-        $this->_logger = \Logger::getLogger('Pami.ClientImpl');
 	    $this->_host = $options['host'];
 		$this->_port = intval($options['port']);
 		$this->_user = $options['username'];
